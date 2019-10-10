@@ -156,13 +156,11 @@ Propagation
 
 #### 问题1
 
-同一个类中调用申明了事务的方法，事务未生效，发生异常未回滚。
+同一个类中a、b两个方法，b有事务a没有事务，a方法中调用b方法有事务吗？
 
 
 
 Spring事务管理通过AOP 代理去实现，也就是说Spring在初始化IOC容器时将事务管理加入bean（代理）中，所以如果事务产生作用首先要调用aop代理对象，而不是目标对象（this），如下
-
-
 
 ```java
 @Component
@@ -217,6 +215,18 @@ public class ShopServiceImpl {
 
 代码中没有调用代理对象的updateByAnnotationTx方法，而是直接调用目标对象的方法，导致调用该方法时并没有事务管理，事务名txName为空null。
 
+
+
+如果通过ShopServiceTxTest的代理对象调用方法a呢？
+
+结果是一样的，调用的a方法没有@Transactional注解代理类不会开事务，而是直接调用了目标对象方法a，当进入目标对象方法后，执行的上下文已经变成目标对象本身了，与代理对象没有关系，调用的b方法也是目标方法本身而不是代理后的b方法，也就没有事务
+
+**如果是在a方法中调用代理对象的b方法则会有事务**
+
+因为此时调用的是代理对象的b方法，而不是目标对象的b方法
+
+
+
 ##### 原因
 
 为什么会这样，spring在初始化ioc容器生成spring bean时，扫描到方法上有Transactional事务注解，会在bean对象的方法前后加上事务管理的代码，就是说只有使用spring通过代理生成的bean代理对象才会有事务，原始对象（目标对象）不会有事务。
@@ -229,12 +239,18 @@ public class ShopServiceImpl {
 
 //1.上下文获取bean
 context.getBean(ShopServiceTxTest.class).updateByAnnotationTx();
-//2. 通过ThreadLocal 当前代理
+//2. 通过ThreadLocal 获取当前代理
 ((ShopServiceTxTest)AopContext.currentProxy()).updateByAnnotationTx();
 ```
 
 ​	
 
 #### 问题2
+
+对于没有实现接口的类，只能使用CGLIB来生成代理。假设有这样一个类，它里面包含public方法，protected方法，private方法，package方法，final方法，static方法，我都给它们加上事务注解，哪些方法会有事务呢？
+
+
+
+#### 问题3
 
 spring bean是代理对象还是原生对象
