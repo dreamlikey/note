@@ -1,3 +1,49 @@
+##### 整体调用过程
+
+###### 创建代理
+
+Spring Ioc容器加载并初始化Bean的过程中，会对每个bean执行所有的后置处理（所有实现了BeanPostProcessor接口的类），AbstractAtuoProxyCreator也是其中一个，在它的后置处理中对当前Bean进行代理检查（是否需要创建代理类），如果需要则通过JDK动态代理或CGLIB生成代理类创建代理实例。
+
+**Spring Ioc容器初始化Bean时通过AbstractAtuoProxyCreator的后置处理生成代理**
+
+原生对象
+
+![1571218163575](C:\Users\jiachao\AppData\Roaming\Typora\typora-user-images\1571218163575.png)
+
+**经过后置处理过后，返回CGLIB代理对象（result）给IOC容器，这就是为什么获取的Spring Bean是一个代理对象的原因**，代理实现了事务处理但不仅限于事务，还有其它的功能增强
+
+![1571218813535](C:\Users\jiachao\AppData\Roaming\Typora\typora-user-images\1571218813535.png)
+
+
+
+**循环调用所有后置处理，AbstractAtuoProxyCreator包含在其中**
+
+```java
+public Object applyBeanPostProcessorsAfterInitialization(Object existingBean, String beanName)
+      throws BeansException {
+
+   Object result = existingBean;
+   for (BeanPostProcessor processor : getBeanPostProcessors()) {
+      Object current = processor.postProcessAfterInitialization(result, beanName);
+      if (current == null) {
+         return result;
+      }
+      result = current;
+   }
+   return result;
+}
+```
+
+Spring Ioc容器最终
+
+###### 代理添加事务增加
+
+
+
+**debug调用追踪全图**
+
+![1571215229958](C:\Users\jiachao\AppData\Roaming\Typora\typora-user-images\1571215229958.png)
+
 ##### 1-TransactionAutoConfiguration
 
 spring-boot对Spring trancation的自动配置类，EnableTransactionManagementConfiguration是其中一个静态内部类，**启用事务管理配置**
@@ -43,7 +89,7 @@ public @interface EnableTransactionManagement {
 
 ##### 2-TransactionManagementConfigurationSelector
 
-org.springframework.transaction.annotation.TransactionManagementConfigurationSelector事务管理配置选择器，它的作用是
+org.springframework.transaction.annotation.TransactionManagementConfigurationSelector事务管理配置选择器
 
 ```java
 public class TransactionManagementConfigurationSelector extends AdviceModeImportSelector<EnableTransactionManagement> {
@@ -334,3 +380,75 @@ public class BeanFactoryTransactionAttributeSourceAdvisor extends AbstractBeanFa
 
 
 ##### 5-TransactionInterceptor
+
+##### 6-Advisor
+
+
+
+##### 7-AopProxy
+
+###### JdkDynamicAopProxy
+
+```java
+@Override
+	public Object getProxy(@Nullable ClassLoader classLoader) {
+		if (logger.isDebugEnabled()) {
+			logger.debug("Creating JDK dynamic proxy: target source is " + this.advised.getTargetSource());
+		}
+		Class<?>[] proxiedInterfaces = AopProxyUtils.completeProxiedInterfaces(this.advised, true);
+		findDefinedEqualsAndHashCodeMethods(proxiedInterfaces);
+		return Proxy.newProxyInstance(classLoader, proxiedInterfaces, this);
+	}
+
+```
+
+**JDK反射重新创建一个功能增加后的实例，这个实例就是代理类**
+
+动态编译生成字节码，再反编译字节码生成代理类
+
+JDK动态代理部分源码
+
+```java
+ public static Object newProxyInstance(ClassLoader loader,
+                                       Class<?>[] interfaces,
+                                       InvocationHandler h)
+        throws IllegalArgumentException
+    {
+        Objects.requireNonNull(h);
+        final Class<?>[] intfs = interfaces.clone();
+        final SecurityManager sm = System.getSecurityManager();
+        if (sm != null) {
+            checkProxyAccess(Reflection.getCallerClass(), loader, intfs);
+        }
+
+        /*
+         * Look up or generate the designated proxy class.
+         */
+        Class<?> cl = getProxyClass0(loader, intfs);
+
+        /*
+         * Invoke its constructor with the designated invocation handler.
+         */
+        try {
+            if (sm != null) {
+                checkNewProxyPermission(Reflection.getCallerClass(), cl);
+            }
+
+            final Constructor<?> cons = cl.getConstructor(constructorParams);
+            final InvocationHandler ih = h;
+            if (!Modifier.isPublic(cl.getModifiers())) {
+                AccessController.doPrivileged(new PrivilegedAction<Void>() {
+                    public Void run() {
+                        cons.setAccessible(true);
+                        return null;
+                    }
+                });
+            }
+            return cons.newInstance(new Object[]{h});
+        }
+    }
+```
+
+
+
+###### CglibApoProxy
