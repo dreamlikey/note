@@ -14,7 +14,7 @@ Spring面向切面编程
 
 ##### Advice通知
 
-在切面的连接点上采取的动作，通知类型有环绕通知（around）、前通知（before）、后通知（after），许多AOP框架包括Spring将Advice定义为lterceptor拦截器，并在连接点join point周围简历拦截器链
+在切面的连接点上采取的动作，通知类型有环绕通知（around）、前通知（before）、后通知（after），许多AOP框架包括Spring将Advice定义为lterceptor拦截器，并在连接点join point周围建立拦截器链
 
 ##### Pointcut 切入点
 
@@ -44,3 +44,28 @@ Spring aop默认为aop代理使用jdk动态代理实现，它允许代理任何�
 
 Spring aop还可以使用CGLIB进行代理，在spring中使用CGLID来代理没有实现接口的类，程序员可以对接口强制使用CGLID代理
 
+
+
+#### Spring aop包结构
+
+aspectj、config、framework、interceptor、scope、support
+
+##### framework
+
+包含spring的基本的AOP基础设施包，满足aop公约规范
+
+##### aspectj
+
+Aspectj集成包，包括对Spring Aop 通知对Aspecj-5注解风格的实现
+
+##### config
+
+声明式AOP配置的辅助包
+
+##### Interceptor
+
+各种拦截器的实现，其它更具体的拦截器在响应的功能包中，像“tansaction”和“orm”
+
+##### support
+
+调用Spring aop所提供的类
