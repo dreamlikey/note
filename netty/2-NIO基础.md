@@ -123,5 +123,65 @@ IO多路复用大致流程图：
 
 ### 零拷贝
 
+##### 场景
+
+从一个文件中读出数据并将数据传到另一台服务器上？
+
+1. `File.read(file, buf, len);`
+2. `Socket.send(socket, buf, len);`
+
+##### 执行过程（2次CPU拷贝）
+
+![2-2次拷贝](E:\wdq\note\netty\2-2次拷贝.jpg)
+
+读取本地文件（read）发送（write）到远端服务器要经历四次拷贝：
+
+1、应用程序调用read()方法，切换上下文用户态->内核态，底层使用DMA（direct memory access）将磁盘数据拷贝到内核读缓冲区
+
+2、将内核读缓冲区的数据拷贝到用户空间，切换上下文内核态-》用户态，如果有需要应用程序对数据进行处理（？这个动作谁主动发起的）
+
+3、为了将文件内容发送到远端服务器，调用socket.send()方法，这里涉及到一次上下文切换用户态-》内核态，并且发生第三次拷贝，用户空间的数据拷贝到socket buffer套接字缓冲区
+
+4、send()返回引发第四次上下文切换（内核态-》用户态），并进行第四次拷贝，DMA将socket buffer中的数据拷贝到协议引擎进行发送（NIC buffer 网卡缓冲区）
+
+**整个过程1、4由DMA负责，2、3由CPU负责，4次拷贝（2次DMA拷贝，2次CPU拷贝），4次切换上下文**
 
 
+
+##### 优化执行过程（1次CPU拷贝）
+
+![2-1次拷贝](E:\wdq\note\netty\2-1次拷贝.jpg)
+
+2、3两步由内核的read buffer 拷贝到 用户进程空间 再拷贝到 内核的socket buffer经历两次上下文切换和2次拷贝，**我们可以直接走read buffer将数据拷贝到socket buffer经历2次上下文切换，3次拷贝**
+
+- 2次上下文切换
+- 3次拷贝，2次DMA拷贝，1次CPU拷贝
+
+
+
+##### 优化执行过程（零拷贝）
+
+![2-零拷贝](E:\wdq\note\netty\2-零拷贝.png)
+
+上文优化之后还是要经过一次CPU拷贝没有真正实现零拷贝，可以再次优化IO过程
+
+在 Linux 内核 2.4 及后期版本中，针对套接字缓冲区描述符做了相应调整，**DMA自带了收集功能**，对于用户方面，用法还是一样，只是内部操作已经发生了改变：
+
+- DMA将数据拷贝到内核读缓冲区
+- 将内核读缓冲区的描述符（数据位置，长度）追加到套接字缓冲区，DMA引擎根据描述符直接把数据从内核读缓冲区传输到传输引擎从而避免了最后一次CPU拷贝
+
+经历2次上下文切换，2次DMA拷贝，0次CPU拷贝
+
+
+
+##### JAVA实现
+
+"在Java中，FileChannel的transferTo() 方法可以实现这个过程，该方法将数据从文件通道传输到给定的可写字节通道， 上面的 `file.read()`和 `socket.send()` 调用动作可以替换为 **`transferTo()`** 调用
+
+```java
+public abstract long transferTo(long position, long count, WritableByteChannel target)
+```
+
+
+
+### select/epoll
