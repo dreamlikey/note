@@ -324,13 +324,25 @@ select * from user where name = #{name}
 
 #### 缓存
 
-##### 二级缓存
+##### 一级缓存
 
-SqlSession级别缓存
+###### 定义
 
-SqlSessionFactory创建会话时创建的Excutor（BaseExecutor）中包含有PerpetualCache( localCache)实例，它包含一个HashMap成员变量用于存储查询结果，执行sql查询时将返回结果作为value保存到map中
+SqlSession级别缓存，同一个session多次执行相同查询，第二次及以后的查询会从缓存中取
+
+SqlSessionFactory创建会话时创建的Excutor（BaseExecutor）中包含有PerpetualCache( localCache)实例，它包含一个HashMap成员变量用于存储查询结果，执行sql查询时将返回结果作为value保存到map中，下一次如果执行相同的查询（key相同）会从缓存中取。
 
 
+
+一级缓存默认开启，默认作用域SESSION，若要关闭一级缓存作用域设为STATEMENT
+
+```java
+public enum LocalCacheScope {
+  SESSION,STATEMENT
+}
+```
+
+###### 源码
 
 **org.apache.ibatis.executor.BaseExecutor**
 
@@ -345,7 +357,7 @@ private <E> List<E> queryFromDatabase(MappedStatement ms, Object parameter, RowB
   } finally {
     localCache.removeObject(key);
   }
-  //查询结果存入二级缓存（HashMap）
+  //查询结果存入一级缓存（HashMap）
   localCache.putObject(key, list);
   if (ms.getStatementType() == StatementType.CALLABLE) {
     localOutputParameterCache.putObject(key, parameter);
@@ -359,7 +371,7 @@ private <E> List<E> queryFromDatabase(MappedStatement ms, Object parameter, RowB
     List<E> list;
     try {
       queryStack++;
-      //是否存在二级缓存中
+      //是否存在一级缓存中
       list = resultHandler == null ? (List<E>) localCache.getObject(key) : null;
       if (list != null) {
         handleLocallyCachedOutputParameters(ms, key, parameter, boundSql);
@@ -371,17 +383,25 @@ private <E> List<E> queryFromDatabase(MappedStatement ms, Object parameter, RowB
   }
 ```
 
+###### 使用
 
-
-##### 一级缓存
-
-一级缓存是SqlSessionFactory级别的缓存
+默认开启
 
 
 
-mybatis初始化过程中，扫描mapper.xml将sql声明对象（MappedStatement） 存到一个HashMap中，这个map当前SqlSessionFactory共享，就是说只要通过当前SqlSessionFactory创建的sqlsession且是同一个查询都具有相同MappedStatement，MappedStatement对象中的Cache对象作为这个sql的查询缓存
+##### 二级缓存
+
+###### 定义
+
+**二级缓存是Mapper级别的缓存**
 
 
+
+mybatis初始化过程中，扫描映射文件，每个Mapper文件生成一个对应的MappedStatement实例存到Configuration实例的一个HashMap中，Mybatis通过Configuration构建SqlSessionFactory然后产生SqlSession，所有的SqlSession都是从同一个Configuration实例获取MappedStatement，就是说同一个查询都具有相同MappedStatement实例，MappedStatement对象中的Cache对象作为这个sql的查询缓存。
+
+
+
+###### 源码
 
 **org.apache.ibatis.session.Configuration**
 
@@ -390,14 +410,111 @@ mybatis初始化过程中，扫描mapper.xml将sql声明对象（MappedStatement
 protected final Map<String, MappedStatement> mappedStatements = new StrictMap<MappedStatement>("Mapped Statements collection")
     .conflictMessageProducer((savedValue, targetValue) ->
         ". please check " + savedValue.getResource() + " and " + targetValue.getResource());
+protected boolean cacheEnabled = true;
 
-protected final Map<String, Cache> caches = new StrictMap<>("Caches collection");
+/**
+   * 创建执行器Executor<br/>
+   * 默认Simple执行器，如果开启了二级缓存cacheEnabled = true，则创建CachingExecutor
+   */
+  public Executor newExecutor(Transaction transaction, ExecutorType executorType) {
+    executorType = executorType == null ? defaultExecutorType : executorType;
+    executorType = executorType == null ? ExecutorType.SIMPLE : executorType;
+    Executor executor;
+    if (ExecutorType.BATCH == executorType) {
+      executor = new BatchExecutor(this, transaction);
+    } else if (ExecutorType.REUSE == executorType) {
+      executor = new ReuseExecutor(this, transaction);
+    } else {
+      executor = new SimpleExecutor(this, transaction);
+    }
+    //是否开启二级缓存，默认true
+    if (cacheEnabled) {
+      executor = new CachingExecutor(executor);
+    }
+    executor = (Executor) interceptorChain.pluginAll(executor);
+    return executor;
+  }
+```
+
+org.apache.ibatis.executor.CachingExecutor#query()
+
+```java
+@Override
+public <E> List<E> query(MappedStatement ms, Object parameterObject, RowBounds rowBounds, ResultHandler resultHandler, CacheKey key, BoundSql boundSql)
+    throws SQLException {
+  //二级缓存
+  Cache cache = ms.getCache();
+  if (cache != null) {
+    flushCacheIfRequired(ms);
+    if (ms.isUseCache() && resultHandler == null) {
+      ensureNoOutParams(ms, boundSql);
+      //查询二级缓存
+      List<E> list = (List<E>) tcm.getObject(cache, key);
+      if (list == null) {
+        list = delegate.query(ms, parameterObject, rowBounds, resultHandler, key, boundSql);
+        tcm.putObject(cache, key, list);
+      }
+      return list;
+    }
+  }
+  return delegate.query(ms, parameterObject, rowBounds, resultHandler, key, boundSql);
+}
+```
+
+###### 使用
+
+使用二级缓存
+
+1、cacheEnabled = true
+
+2、声明Mapper使用二级缓存，@CacheNamespace、<cache/>
+
+
+
+a、@CacheNamespace
+
+```java
+@CacheNamespace
+public interface UserMapper {
+
+  @Select("select * from user where id = #{id}")
+  User getByPK(Long id);
+
+  @Select("select * from user where name = #{name}")
+  User getByName(String name);
+
+}
+```
+
+b、 <cache/>
+
+```xml
+<mapper namespace="...UserMapper">
+    <cache/><!-- 加上该句即可，使用默认配置、还有另外一种方式，在后面写出 -->
+    ...
+</mapper>
 ```
 
 
 
+在上面的代码中`tcm.putObject(cache, key, list);`这句代码是缓存了结果。但是实际上直到sqlsession提交，MyBatis才以序列化的形式保存到了一个Map（默认的缓存配置）中。
+
+
+
+查询多于修改时使用二级缓存
+在查询操作远远多于增删改操作的情况下可以使用二级缓存。因为任何增删改操作都将刷新二级缓存，对二级缓存的频繁刷新将降低系统性能。
+
+
+
+
+
 -1119507391:1432194084:org.apache.ibatis.test.UserMapper.getByPK:0:2147483647:select * from user where id = ?:1:development
 
 
 
 -1119507391:1432194084:org.apache.ibatis.test.UserMapper.getByPK:0:2147483647:select * from user where id = ?:1:development
+
+
+
+
+
