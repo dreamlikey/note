@@ -135,8 +135,6 @@ CAS会导致“ABA问题”。
 
 ###### ABA问题解决方式
 
-原子引用AtomicReference
-
 原子引用+版本号AtomicStampedReference
 
 
