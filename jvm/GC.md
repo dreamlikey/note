@@ -44,7 +44,7 @@ G1 既可以进行新生代垃圾回收也可以进行老年代垃圾回收
 
 **图中红X部分，JDK1.8之后不再支持**
 
-![](E:\wdq\note\jvm\image\GC_zrea.png)
+![](image\GC_zrea.png)
 
 #### 垃圾收集器分类
 
@@ -90,7 +90,17 @@ G1 既可以进行新生代垃圾回收也可以进行老年代垃圾回收
 
 #### Parallel Scavenge
 
-并行新生代垃圾回收器，使用**复制算法**
+并行新生代垃圾回收器，使用**复制算法**，俗称吞吐量优先收集器，可控制的吞吐量
+
+吞吐量 = 运行用户代码时间/(运行用户代码时间+垃圾回收时间)，高吞吐量意味着高效利用CPU，
+
+适用于后台计算而不需要太多交互的任务。
+
+**自适应调节策略**也是Parallel Scavenge与ParNew的一个重要区别，虚拟机根据当前系统运行情况动态调节参数以提供最合适的停顿时间和最大吞吐量（-XX:MaxGCPauseMillis）
+
+##### jvm参数
+
+`-XX:+UseParallelGC` -`XX:+UseParallelOldGC`  启用Parallel Scavenge垃圾收集器，这两个参数可以互相激活
 
 
 
@@ -101,6 +111,8 @@ Parallel Old收集器是Parallel Scavenge收集器的老年代版本，使用多
 #### CMS
 
 并发标记清除垃圾收集器Concurrent Mark Sweep，作用于老年代， 基于**标记-清除**算法，垃圾回收线程和用户线程可同时工作
+
+-XX:+UseConcMarkSweepGC
 
 ##### 4步过程
 
