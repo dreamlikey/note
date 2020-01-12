@@ -185,3 +185,105 @@ synchronized(ObjectB) {
 
 线程1占有对象A的锁尝试获取对象B的锁发现被线程2占有于是等待，  同时线程2占有对象B的锁尝试获取对象A的锁同样发现被线程1占有于是等待，**两个线程同时等待获取对方释放所占有的锁**，他们都不会继续向下执行，也释放不了锁，于是永远停在了这里等待，这就是死锁
 
+
+
+#### 代码
+
+```java
+package com.wdq.juc;
+
+import java.util.concurrent.TimeUnit;
+
+public class DeadLockDemo {
+    private String locka = new String();
+    private String lockb = new String();
+
+    public static void main(String[] args) {
+        DeadLockDemo lockDemo = new DeadLockDemo();
+        new Thread(()->{lockDemo.testa();
+        },"thread aaaa").start();
+        new Thread(()->{
+            lockDemo.testb();
+        },"thread bbbb").start();
+    }
+    public void testa() {
+        synchronized (locka) {
+            System.out.println(Thread.currentThread().getName() +"获取locka锁" );
+            try {
+                TimeUnit.SECONDS.sleep(1);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            synchronized (lockb) {
+                System.out.println("执行业务aaaa");
+            }
+        }
+    }
+    public void testb() {
+        synchronized (lockb) {
+            System.out.println(Thread.currentThread().getName() +"获取lockb锁" );
+            try {
+                TimeUnit.SECONDS.sleep(1);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            synchronized (locka) {
+                System.out.println("执行业务bbbb");
+            }
+        }
+    }
+}
+
+```
+
+
+
+#### 排查
+
+如何查看java程序是否发生死锁
+
+1. jps -l
+
+   查看java进程号
+
+2. jstack pid
+
+   查看java进程堆栈信息
+
+   
+
+**java进程堆栈信息**
+
+```java
+Java stack information for the threads listed above:
+===================================================
+
+"thread bbbb":
+        at com.wdq.juc.DeadLockDemo.testb(DeadLockDemo.java:39)
+        - waiting to lock <0x00000000d5d03fd0> (a java.lang.String)
+        - locked <0x00000000d5d03fe8> (a java.lang.String)
+        at com.wdq.juc.DeadLockDemo.lambda$main$1(DeadLockDemo.java:14)
+        at com.wdq.juc.DeadLockDemo$$Lambda$2/379110473.run(Unknown Source)
+        at java.lang.Thread.run(Thread.java:745)
+"thread aaaa":
+        at com.wdq.juc.DeadLockDemo.testa(DeadLockDemo.java:26)
+        - waiting to lock <0x00000000d5d03fe8> (a java.lang.String)
+        - locked <0x00000000d5d03fd0> (a java.lang.String)
+        at com.wdq.juc.DeadLockDemo.lambda$main$0(DeadLockDemo.java:11)
+        at com.wdq.juc.DeadLockDemo$$Lambda$1/1555093762.run(Unknown Source)
+        at java.lang.Thread.run(Thread.java:745)
+
+Found 1 deadlock.
+```
+
+
+
+最后一行明确说明是死锁deadlock，而且两个线程在等待对方持有的锁
+
+"thread bbbb": waiting to lock <0x00000000d5d03fd0>  locked <0x00000000d5d03fe8>
+
+"thread aaaa":waiting to lock <0x00000000d5d03fe8>    locked <0x00000000d5d03fd0>
+
+thread bbbb  持有<0x00000000d5d03fe8> 等待锁<0x00000000d5d03fd0>，而此时thread aaaa 持有
+
+<0x00000000d5d03fd0> 等待<0x00000000d5d03fe8>
