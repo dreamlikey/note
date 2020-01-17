@@ -1,3 +1,7 @@
+### 锁类型
+
+
+
 #### 公平锁
 
 按照请求的先后次序获取锁，后来的线程加入等待队列末尾，以后按照FIFO规则 从队列中取到线程获取锁
@@ -137,3 +141,116 @@ t1先获取锁，执行5秒，线程t2尝试获取失败，循环获取，t1解�
 #### 分段锁
 
 #### 条件锁
+
+
+
+### ReentrantLock
+
+
+
+#### 使用示例
+
+#### 类结构
+
+![可重入锁类结构](image\可重入锁类结构.jpg)
+
+#### 可重入
+
+current == getExclusiveOwnerThread()
+
+判断锁的持有者是不是当前线程，如果是锁状态+1并返回true
+
+```java
+ */
+protected final boolean tryAcquire(int acquires) {
+    final Thread current = Thread.currentThread();
+    int c = getState();
+    if (c == 0) {
+        if (!hasQueuedPredecessors() &&
+            compareAndSetState(0, acquires)) {
+            setExclusiveOwnerThread(current);
+            return true;
+        }
+    }
+     //判断锁的持有者是不是当前线程
+     //是锁状态+1，获取锁
+    else if (current == getExclusiveOwnerThread()) {
+        int nextc = c + acquires;
+        if (nextc < 0)
+            throw new Error("Maximum lock count exceeded");
+        setState(nextc);
+        return true;
+    }
+    return false;
+}
+```
+
+#### 公平
+
+**申请锁逻辑**
+
+1、如果锁没有被占有，判断等待队列是否有等待的线程，如果有加入队尾，如果没有尝试占有锁cas
+
+2、如果锁被已被占有，判断持有锁的线程是否是当前线程，如果是使用次数+1，如果不是返回false
+
+```java
+java.util.concurrent.locks.ReentrantLock.FairSync#lock
+final void lock() {
+            acquire(1);
+        }
+
+public final void acquire(int arg) {
+    if (!tryAcquire(arg) &&
+        acquireQueued(addWaiter(Node.EXCLUSIVE), arg))
+        selfInterrupt();
+}
+
+protected final boolean tryAcquire(int acquires) {
+    final Thread current = Thread.currentThread();
+    int c = getState();
+    if (c == 0) {
+        if (!hasQueuedPredecessors() &&
+            compareAndSetState(0, acquires)) {
+            setExclusiveOwnerThread(current);
+            return true;
+        }
+    }
+     //判断锁的持有者是不是当前线程
+     //是锁状态+1，获取锁
+    else if (current == getExclusiveOwnerThread()) {
+        int nextc = c + acquires;
+        if (nextc < 0)
+            throw new Error("Maximum lock count exceeded");
+        setState(nextc);
+        return true;
+    }
+    return false;
+}
+
+```
+
+
+
+#### 非公平
+
+```java
+java.util.concurrent.locks.ReentrantLock.NonfairSync#lock
+final void lock() {
+    //先尝试获取锁
+    if (compareAndSetState(0, 1))
+        setExclusiveOwnerThread(Thread.currentThread());
+    else //获取锁失败，公平锁方式获取锁
+        acquire(1);
+}
+```
+
+
+
+#### 自旋
+
+尝试获取锁失败，将线程加入等待队列后再次申请锁
+
+```java
+acquireQueued(addWaiter(Node.EXCLUSIVE), arg))
+```
+
