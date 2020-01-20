@@ -6,6 +6,8 @@
 
 ### 加锁
 
+#### lock
+
 #### aquire
 
 ```java
@@ -22,6 +24,6 @@ public final void acquire(int arg) {
 
 ### 释放锁
 
-
+#### unlock
 
 #### unpark
