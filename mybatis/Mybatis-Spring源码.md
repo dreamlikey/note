@@ -1,0 +1,5 @@
+SqlSessionTemplate
+
+MapperScannerRegistrar
+
+SqlSessionFactoryBean

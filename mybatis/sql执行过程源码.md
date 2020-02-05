@@ -401,6 +401,8 @@ mybatis初始化过程中，扫描映射文件，每个Mapper文件生成一个�
 
 
 
+
+
 ###### 源码
 
 **org.apache.ibatis.session.Configuration**
@@ -516,5 +518,7 @@ b、 <cache/>
 
 
 
+###### 坑
 
+**对一个表对应的Mapper开启了二级缓存， 如果在其它Mapper中对该数据库表进行了增删改操作，表对应的Mapper的二级缓存不会相应更新还是原本的结果**
 
