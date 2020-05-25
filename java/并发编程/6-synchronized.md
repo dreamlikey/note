@@ -67,6 +67,16 @@ java对象保存在内存中，由三部分组成
 
 
 
+markword 8个字节
+
+klass pointer 指针
+
+实例数据
+
+补齐
+
+
+
 #### 代码
 
 ```java
@@ -147,13 +157,30 @@ The first word of every object header. Usually a set of bitfields including sync
 
 ![锁状态](image\锁状态.png)
 
-无锁状态
+偏向锁和轻量级锁都是用户空间完成
 
-偏向锁
+重量级锁需要内核空间完成
 
-轻量级锁
 
-重量级锁
+
+- 无锁状态
+- 偏向锁
+
+- 轻量级锁
+
+- 重量级锁
+
+
+
+```mermaid
+graph LR
+A[普通对象] -->C[偏向锁]
+B[无锁]    -->C[偏向锁]
+
+    C -->|c<1| D[轻量级锁]
+    C -->|c>=10| E[重量级锁]
+```
+
 
 
 
@@ -287,3 +314,11 @@ Found 1 deadlock.
 thread bbbb  持有<0x00000000d5d03fe8> 等待锁<0x00000000d5d03fd0>，而此时thread aaaa 持有
 
 <0x00000000d5d03fd0> 等待<0x00000000d5d03fe8>
+
+
+
+
+
+The Java@ V irtual
+Machine Specification
+Java SE 13 Edition
