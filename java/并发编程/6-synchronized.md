@@ -159,14 +159,31 @@ The first word of every object header. Usually a set of bitfields including sync
 
 偏向锁和轻量级锁都是用户空间完成
 
-重量级锁需要内核空间完成
+重量级锁需要内核空间完成（有系统调用在用户态、内核太之间切换）
 
 
 
 - 无锁状态
+
+  
+
+  
+
 - 偏向锁
 
+  自旋获取锁（获取失败自旋）
+
+  缺点是：自旋消耗CPU，如果多个线程长时间自旋，CPU升高性能降低
+
+  优点：
+
+  ​	1、偏向锁在用户态中实现，没有系统调用也就没有用户态、内核态之间的切换
+
+  ​	2、虽然加了锁，但是绝大多数时间
+
 - 轻量级锁
+
+  CAS尝试获取锁，获取失败升级重量级锁
 
 - 重量级锁
 
@@ -176,12 +193,30 @@ The first word of every object header. Usually a set of bitfields including sync
 graph LR
 A[普通对象] -->C[偏向锁]
 B[无锁]    -->C[偏向锁]
-
-    C -->|c<1| D[轻量级锁]
-    D[轻量级锁] --> E[重量级锁]
+    C -->|c<10| D[轻量级锁]
     C -->|c>=10| E[重量级锁]
     
 ```
+
+##### 锁的升级过程
+
+
+
+##### **申请锁的过程**
+
+1、线程运行到程序的同步代码块时，若mark word为无锁状态，则虚拟机在当前线程的栈贞中建立Lock Record空间
+
+2、复制mark word到Lock Record中
+
+3、若复制成功，虚拟机使用CAS操作将对象头的mark word修改为Lock Record的指针【stack pointer】，Lock Record中的owner指向mark word
+
+4、修改成功，修改Lock Record中的mark word 的锁状态为轻量级锁 00
+
+5、若修改失败，虚拟机检查mark word是否指向当前线程的栈贞，如果是则当前线程拥有锁执行同步代码，如果不是，说明存在多个线程竞争，
+
+修改mark word中的锁标识为重量级锁（执行升级重量级锁的逻辑）
+
+
 
 
 
