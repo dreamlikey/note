@@ -157,6 +157,10 @@ The first word of every object header. Usually a set of bitfields including sync
 
 ![锁状态](image\锁状态.png)
 
+##### 重量级锁与轻量级锁的区别
+
+
+
 偏向锁和轻量级锁都是用户空间完成
 
 重量级锁需要内核空间完成（有系统调用在用户态、内核太之间切换）
@@ -193,10 +197,28 @@ The first word of every object header. Usually a set of bitfields including sync
 graph LR
 A[普通对象] -->C[偏向锁]
 B[无锁]    -->C[偏向锁]
-    C -->|c<10| D[轻量级锁]
-    C -->|c>=10| E[重量级锁]
+    C --> |c<10| D[轻量级锁]
+    C --> |c>=10| E[重量级锁]
     
 ```
+
+##### 用户态和内核态的转换
+
+用户态切换到内核态的三种方式：系统调用、异常、外围社保的中断
+
+###### 系统调用
+
+从下到上看一个完整的计算机系统：物理硬件 -> OS内核 -> OS服务 ->应用程序
+
+OS内核向下管理硬件，向上为操作系统服务和应用程序提供接口。
+
+
+
+系统调用是应用程序主动进入内核的方式
+
+
+
+
 
 ##### 锁的升级过程
 
