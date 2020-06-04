@@ -53,6 +53,14 @@ synchronized修饰方法时，ACC_SYNCHRONIZED作为锁标记
 
 
 
+#### 字节码层级
+
+
+
+#### JVM层级（hotspot）
+
+InterpreterRuntime::monitorenter
+
 
 
 ### 对象组成
@@ -139,11 +147,25 @@ openjdk对jvm规范对象头定义如下：
 
 每个gc管理的堆对象开头的公共结构。(每个oop都指向一个对象标头。)包括堆对象的布局、类型、GC状态、同步状态和标识哈希码的基本信息。由两个词组成（mark word,klass pointer）。在数组中，它后面紧跟着一个长度字段。注意，Java对象和vm内部对象都有一个通用的对象头格式。
 
+mark word
+
+klass pointer
+
+实例数据
+
+补齐
 
 
-#### 两个词
+
+
+
+
+
+#### **mark word**/klass pointer
 
 **mark word**
+
+保存包含有锁状态、GC信息（GC标志、age）、对象唯一标识
 
 The first word of every object header. Usually a set of bitfields including synchronization state and identity hash code. May also be a pointer (with characteristic low bit encoding) to synchronization related information. During GC, may contain GC state bits.
 
@@ -175,6 +197,8 @@ The first word of every object header. Usually a set of bitfields including sync
 
 - 偏向锁
 
+  **用户空间完成**
+
   自旋获取锁（获取失败自旋）
 
   缺点是：自旋消耗CPU，如果多个线程长时间自旋，CPU升高性能降低
@@ -183,24 +207,35 @@ The first word of every object header. Usually a set of bitfields including sync
 
   ​	1、偏向锁在用户态中实现，没有系统调用也就没有用户态、内核态之间的切换
 
-  ​	2、虽然加了锁，但是绝大多数时间
+  ​	2、虽然加了锁，但是绝大多数时间只有一个线程在使用，这时使用偏向锁，没有额外的锁的开销，性能更好
+
+     但是若有其它线程申请锁，这时偏向锁就升级为轻量级锁。      
 
 - 轻量级锁
 
-  CAS尝试获取锁，获取失败升级重量级锁
+  **用户空间完成**
+
+  发现偏向锁的线程ID不是自己，线程CAS尝试获取锁，获取失败一定次数后升级重量级锁
+
+  
 
 - 重量级锁
 
+  需要向内核申请，发生系统调用，**用户态到内核态的切换是一个十分重量级的操作所以称为重量级锁**
 
+  如果没拿到锁进入等待队列
 
 ```mermaid
 graph LR
 A[普通对象] -->C[偏向锁]
-B[无锁]    -->C[偏向锁]
+B[匿名偏向]    -->C[偏向锁]
     C --> |c<10| D[轻量级锁]
     C --> |c>=10| E[重量级锁]
+    D[轻量级锁] --> E[重量级锁]
     
 ```
+
+
 
 ##### 用户态和内核态的转换
 
