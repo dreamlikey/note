@@ -61,11 +61,92 @@ synchronized修饰方法时，ACC_SYNCHRONIZED作为锁标记
 
 InterpreterRuntime::monitorenter
 
+java的native源码，可以从jni.cpp或jvm.cpp
+
+
+
+```c++
+// Synchronization 锁
+// 包含锁的升级过程
+// The interpreter's synchronization code is factored out so that it can
+// be shared by method invocation and synchronized blocks.
+//%note synchronization_3
+
+//进入锁
+//%note monitor_1
+IRT_ENTRY_NO_ASYNC(void, InterpreterRuntime::monitorenter(JavaThread* thread, BasicObjectLock* elem))
+#ifdef ASSERT
+  thread->last_frame().interpreter_frame_verify_monitor(elem);
+#endif
+  if (PrintBiasedLockingStatistics) {
+    Atomic::inc(BiasedLocking::slow_path_entry_count_addr());
+  }
+  Handle h_obj(thread, elem->obj());
+  assert(Universe::heap()->is_in_reserved_or_null(h_obj()),
+         "must be NULL or an object");
+  //开启偏向锁
+  if (UseBiasedLocking) {
+    // Retry fast entry if bias is revoked to avoid unnecessary inflation
+    ObjectSynchronizer::fast_enter(h_obj, elem->lock(), true, CHECK);
+  } else {
+    ObjectSynchronizer::slow_enter(h_obj, elem->lock(), CHECK);
+  }
+  assert(Universe::heap()->is_in_reserved_or_null(elem->obj()),
+         "must be NULL or an object");
+#ifdef ASSERT
+  thread->last_frame().interpreter_frame_verify_monitor(elem);
+#endif
+IRT_END
+
+//退出锁
+//%note monitor_1
+IRT_ENTRY_NO_ASYNC(void, InterpreterRuntime::monitorexit(JavaThread* thread, BasicObjectLock* elem))
+#ifdef ASSERT
+  thread->last_frame().interpreter_frame_verify_monitor(elem);
+#endif
+  Handle h_obj(thread, elem->obj());
+  assert(Universe::heap()->is_in_reserved_or_null(h_obj()),
+         "must be NULL or an object");
+  if (elem == NULL || h_obj()->is_unlocked()) {
+    THROW(vmSymbols::java_lang_IllegalMonitorStateException());
+  }
+  ObjectSynchronizer::slow_exit(h_obj(), elem->lock(), thread);
+  // Free entry. This must be done here, since a pending exception might be installed on
+  // exit. If it is not cleared, the exception handling code will try to unlock the monitor again.
+  elem->set_obj(NULL);
+#ifdef ASSERT
+  thread->last_frame().interpreter_frame_verify_monitor(elem);
+#endif
+IRT_END
+```
+
+#### OS层
+
+**操作系统指令/汇编指令**
+
+
+
+##### monitor指令
+
+
+
+
+
+##### CAS
+
+CAS操作虚拟机生成一条lock cmpxchg的汇编指令，cmpxchg意为比较并交换是非原子操作为了保证原子性加上了lock指令，lock指令会锁住访问内存总线使得其他线程无法访问同一内存区域从而自旋判断，线程不会进入随眠或阻塞状态而是一直自旋。CAS的优点在于**所有操作都在用户态中完成**（线程不会随眠阻塞，操作系统不需要切换到内核态进行线程调度），缺点在于**自旋消耗CPU，如果竞争激烈自旋的线程过多CPU的压力会很大**。
+
+
+
+
+
 
 
 ### 对象组成
 
 openjdk hotspot 官方文档http://openjdk.java.net/groups/hotspot/
+
+hotspot源码下载 http://hg.openjdk.java.net/jdk8/
 
 java对象保存在内存中，由三部分组成
 
@@ -195,7 +276,7 @@ The first word of every object header. Usually a set of bitfields including sync
 
   
 
-- 偏向锁
+- **偏向锁**
 
   **用户空间完成**
 
@@ -209,9 +290,11 @@ The first word of every object header. Usually a set of bitfields including sync
 
   ​	2、虽然加了锁，但是绝大多数时间只有一个线程在使用，这时使用偏向锁，没有额外的锁的开销，性能更好
 
-     但是若有其它线程申请锁，这时偏向锁就升级为轻量级锁。      
+     但是若有其它线程申请锁，这时偏向锁就升级为轻量级锁。    
 
-- 轻量级锁
+    
+
+- **轻量级锁**
 
   **用户空间完成**
 
@@ -219,11 +302,13 @@ The first word of every object header. Usually a set of bitfields including sync
 
   
 
-- 重量级锁
+- **重量级锁**
 
-  需要向内核申请，发生系统调用，**用户态到内核态的切换是一个十分重量级的操作所以称为重量级锁**
+  底层通过mutex lock（互斥锁）实现，等待锁的线程会被阻塞（阻塞队列中），由于Linux下Java线程与操作系统内核态线程一一映射，**所以涉及用户态和内核态之间的切换**，**内核态中线程的挂起和唤醒操作**(线程之间的切换在内核中完成)。所以称之为重量级锁
 
-  如果没拿到锁进入等待队列
+  **用户态到内核态的切换是一个十分重量级的操作所以称为重量级锁**
+  
+  
 
 ```mermaid
 graph LR
@@ -234,6 +319,14 @@ B[匿名偏向]    -->C[偏向锁]
     D[轻量级锁] --> E[重量级锁]
     
 ```
+
+
+
+
+
+###### **Mutex Lock**（互斥锁）
+
+
 
 
 
@@ -259,7 +352,7 @@ OS内核向下管理硬件，向上为操作系统服务和应用程序提供接
 
 
 
-##### **申请锁的过程**
+##### **轻量级锁的加锁过程**
 
 1、线程运行到程序的同步代码块时，若mark word为无锁状态，则虚拟机在当前线程的栈贞中建立Lock Record空间
 
