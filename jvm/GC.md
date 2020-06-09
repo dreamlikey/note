@@ -1,3 +1,9 @@
+
+
+oracle官方文档
+
+https://docs.oracle.com/javase/8/docs/technotes/guides/vm/gctuning/index.html
+
 ### 垃圾回收算法
 
 #### 复制算法
@@ -141,8 +147,14 @@ Parallel Old收集器是Parallel Scavenge收集器的老年代版本，使用多
 
 #### G1
 
+https://docs.oracle.com/javase/8/docs/technotes/guides/vm/gctuning/g1_gc.html#garbage_first_garbage_collection
+
 G1不同于传统的垃圾收集器，使用了全新的垃圾回收算法，区块化垃圾回收
 
 
 
 ###### 特点
+
+
+
+#### ZGC
