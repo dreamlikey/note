@@ -4,6 +4,20 @@ oracle官方文档
 
 https://docs.oracle.com/javase/8/docs/technotes/guides/vm/gctuning/index.html
 
+
+
+1、确定什么样的对象是垃圾对象
+
+2、该如何回收（垃圾回收算法）
+
+3、具体的垃圾回收器回收
+
+4、优劣势，该如何选型
+
+5、垃圾回收调优
+
+
+
 ### 垃圾回收算法
 
 #### 复制算法
