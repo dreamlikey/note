@@ -31,10 +31,6 @@ cache.get(1);       // 返回 -1 (未找到)
 cache.get(3);       // 返回  3
 cache.get(4);       // 返回  4
 
-来源：力扣（LeetCode）
-链接：https://leetcode-cn.com/problems/lru-cache
-著作权归领扣网络所有。商业转载请联系官方授权，非商业转载请注明出处。
-
 ```java
 class LRUCache {
 
@@ -52,11 +48,15 @@ class LRUCache {
 }
 ```
 
-
+hash表 + 双向链表
 
 
 
 ### linkedhashmap
+
+hashMap + 双向链表
+
+
 
 
 
