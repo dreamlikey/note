@@ -46,14 +46,17 @@ jclasslib
 
 JVM规范规定，被volatile修饰的内存空间禁止对其进行指令重排序，JVM虚拟机（hotspot/j9）的实现方式是在这块内存加上内存屏障。
 
-被volatile修饰的变量（内存）在JVM生成汇编指令时加上一条**lock addl 0x0**指令往寄存器中加0，这条指令是空操作但是它是被锁住的，lock指令实现内存屏障的功能。
+被volatile修饰的变量（内存）在JVM生成汇编指令时加上一条**lock addl 0x0**指令作用仅仅是将RSP寄存器中加0，这条指令是空操作但是它是被锁住的，lock指令实现（充当）内存屏障的作用。
 
 
 
 ```java
- 0x0000000002e1e22a: lock addl $0x0,(%rsp)     ;*putstatic i
+内存地址						0X0 十六进制的0
+0x0000000002e1e22a: lock addl $0x0,(%rsp)     ;*putstatic i
                                                 ; - com.wdq.T::n@1 (line 14)
 ```
+
+
 
 
 
@@ -66,6 +69,10 @@ JVM规范规定，被volatile修饰的内存空间禁止对其进行指令重排
 
 
 synchronized之所以能保证可见性，是因为synchronized的底层cpu指令也是lock(lock cmpxchg)，所以能保证可见性。
+
+```java
+  0x0000000003292a5e: lock cmpxchg %rbx,(%rsi)
+```
 
 
 
@@ -145,6 +152,10 @@ StoreLoadBarriers;（inited写操作对其它处理器可见（刷新到内存�
 #### 保证可见性
 
 **volatile保证了程序的可见性**
+
+volitaile修饰的变量，汇编指令上会加上lock指令，CPU在对这块内存进行操作时将CPU与主内存通信总线上加锁 或者 对此缓存行加锁，通过串行化 或者 缓存一致性协议保证这块内存区域对其它CPU缓存可见
+
+
 
 ##### volatile可见性规则
 
