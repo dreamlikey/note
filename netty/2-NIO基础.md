@@ -123,7 +123,7 @@ IO多路复用大致流程图：
 
 ##### 场景
 
-从一个文件中读出数据并将数据传到另一台服务器上？
+从一个·文件中读出数据并将数据传到另一台服务器上？
 
 1. `File.read(file, buf, len);`
 2. `Socket.send(socket, buf, len);`
@@ -183,3 +183,4 @@ public abstract long transferTo(long position, long count, WritableByteChannel t
 
 
 ### select/epoll
+
