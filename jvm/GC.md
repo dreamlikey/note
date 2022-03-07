@@ -26,7 +26,7 @@ https://docs.oracle.com/javase/8/docs/technotes/guides/vm/gctuning/index.html
 
 #### **如何定位垃圾**
 
-​	1、引用计数法
+##### 	1、引用计数法
 
 ​		无法解决的循环引用问题，已经没有虚拟机使用此算法
 
@@ -60,7 +60,7 @@ https://docs.oracle.com/javase/8/docs/technotes/guides/vm/gctuning/index.html
 
 #### 复制算法
 
-从根集合节点开始，标记出所有存活的对象，将存活的对象复制到一块新的内存区域（内存连续【指正碰撞】），之后将原本那块内存全部回收掉。
+从根集合节点开始，标记出所有存活的对象，将存活的对象复制到一块新的内存区域（内存连续【指针碰撞】），之后将原本那块内存全部回收掉。
 
 优点：算法简单效率高
 
