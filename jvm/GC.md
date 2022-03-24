@@ -34,6 +34,8 @@ https://docs.oracle.com/javase/8/docs/technotes/guides/vm/gctuning/index.html
 
 ​		**a.  GCRoot**
 
+​		垃圾收集器会回收哪些不是gc root且没有被gc root引用的对象。
+
 ​		把GC Root对象作为起点，来进行链路的扫描和访问，如果可达能访问到，就认为是活跃的不能回收，如果不可达不能访问，那就不可达可以回收，所有的GC Root扫描结束之后进行垃圾回收
 
 
@@ -235,8 +237,6 @@ Parallel Old收集器是Parallel Scavenge收集器的老年代版本，使用多
 ##### 4步过程
 
 1. 初始标记
-
-   
 
 2. 并发标记
 

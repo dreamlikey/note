@@ -53,9 +53,9 @@ synchronized修饰方法时，ACC_SYNCHRONIZED作为锁标记
 
 ##### 获取类锁
 
-1. synchronized(Class) {}
+对当前Class对象所对应的类的所有对象加锁
 
-   对当前Class对象所对应的类的所有对象加锁
+1. synchronized(Class) {}
 
 2. 修饰静态方法 public synchronized static void methodname(){}
 
@@ -164,13 +164,17 @@ java对象保存在内存中，由三部分组成
 
 
 
-markword 8个字节
+32位操作系统，对象头占用8个字节：markword 4个字节、klass pointer 指针 4个字节
 
-klass pointer 指针
+64位开启指针压缩的情况下：存放Class指针的空间大小是4字节，MarkWord是8字节，对象头为12字节
 
-实例数据
+64位未开启指针压缩的情况：存放Class指针的空间大小是8字节，MarkWord是8字节，对象头为16字节
 
-补齐
+
+
+
+
+对象所占内存：包含对象头、实例数据、补齐  
 
 
 
@@ -548,4 +552,5 @@ volatile 底层通过操作系统的lock指令实现变量的内存可见性，�
 
 synchronized
 
-解决可见性、一致性、有序性问题
+解决可见性、原子性、有序性问题
+
