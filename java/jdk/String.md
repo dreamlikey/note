@@ -8,13 +8,17 @@ https://www.jianshu.com/p/cf78e68e3a99
 
 ## 声明字符串变量的方式
 
-1、new String对象 String s1= new String("hello world");  
+### 1、new String对象 
 
-通过构造器方式创建的字符串对象存放在**堆内存、不具备不可变性**。除非需要拷贝此String 对象否则不推荐这种方式声明一个字符串。
+String s1= new String("hello world");  
+
+通过构造器方式创建的字符串对象存放在**堆内存**。除非需要拷贝此String 对象否则不推荐这种方式声明一个字符串。
 
 
 
-2、字符串常量拼接 String s2 = "hello" + " world";  
+### 2、字面量拼接
+
+ String s2 = "hello" + " world";  
 
 JVM编译器在编译阶段，将String s2 = “hello” + " world"; 优化为 hello world
 
@@ -30,7 +34,7 @@ public void test_1() {
         System.out.println(str3 == str4);
 
     }
-// 反编译后的jvm指令
+// 编译后的jvm指令
 public void test_1();
     Code:
        0: ldc           #17      // String hello word!
@@ -51,9 +55,15 @@ public void test_1();
 
 
 
-3、字符变量+ 常量拼接 String s3 = s2 + "";
+### 3、变量拼接 
 
-字符变量+ 常量拼接 String 编译器编译器优化后通过StringBuilder apend()方法拼接，最终通过StringBuilder.toString()返回新的字符串对象
+变量 + 变量，String s3 = s2 + s1;
+
+变量 + 字面量，String s3 = s2 + "a";
+
+字符变量拼接 String， 编译器编译器优化后通过StringBuilder apend()方法拼接，最终通过StringBuilder.toString()返回新的字符串对象
+
+测试代码：
 
 String str4 = str1 + " word!";jvm编译器在编译阶段将其优化成了通过StringBuilder.append()进行拼接，
 
@@ -229,6 +239,24 @@ public String concat(String str) {
 
 
 
+## 字符串常量池
+
+**字符串常量池的作用是为了减少字符串对象的创建**【提升JVM在运行时的性能、减少内存、降低垃圾回收压力】，
+
+JVM中构建一个对象是一个相对比较重的活，而且还需要垃圾回收，缓存池就是为了减少对象创建提升性能而存在的，通过String pool缓存String对象创建String pool中存在的字符串直接赋值引用，不需要创建新的String对象。
+
+
+
+String pool实现
+
+jdk1.8中字符串常量池存放在堆中，底层使用HashTable存储数组容量固定，意味着缓存的字符串常量越多 table链表越长，缓存效率越低。
+
+
+
+
+
+
+
 ## 可变字符串 
 
 
@@ -248,10 +276,6 @@ public String concat(String str) {
 ### 与String性能对比
 
 字符串修改操作，变长字符串比String快很多
-
-
-
-String进行修改操作，实际上是创建了新的String对象然后赋值给它；变长字符串【StringBuilder/StringBuffer】的修改操作通过数组拷贝，将修改后的值放到新的数组中来实现【System.arrayCopy()】，不需要创建新的字符串对象。
 
 
 
@@ -292,7 +316,7 @@ ms     %     Task name
 
 
 
-for循环中使用变量对String进行赋值，编译器会优化成StringBuilder apend()进行拼接，最终通过StringBuilder.toString()返回一个新的String对象，所以还是在创建了一个新的Stirng对象返回。
+for循环中使用变量对String进行赋值，编译器会优化成StringBuilder apend()进行拼接，最终通过StringBuilder.toString()返回一个新的String对象，所以不光创建了一个StringBuilder对象还new 了一个新的String对象
 
 ```java
 // 上述测试代码对应的JVM指令，JVM编译器将循环内部的str += i;优化为StringBuilder.append()；通过toString()返回新的字符串对象
@@ -320,3 +344,6 @@ public void test_7();
 
 ```
 
+
+
+## 
