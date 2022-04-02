@@ -26,13 +26,14 @@ ThreadLocal.ThreadLocalMap threadLocals = null;
 
 ### ThreadLocalMap
 
-ThreadLocalMap是一个类似于HashMap的结构，底层数据是Entry[]数组，通过开放地址发解决hash冲突，
+ThreadLocalMap保存的是ThreadLocal的函数式实现，它是一个类似于HashMap的结构，key - ThreadLocal对象，value - function实现，Entry[]数组保存ThreadLocal的函数式实现，通过ThreadLocal对象的hash函数定位到数组下标，使用开放地址解决hash冲突，
 
-hash散列通过斐波那契散列法来保证哈希表的离散度。key - ThreadLocal对象，value - function实现。
+hash散列通过斐波那契散列法来保证哈希表的离散度。
 
-Entry
+
 
 ```java
+static class ThreadLocalMap {
 /**
  * The entries in this hash map extend WeakReference, using
  * its main ref field as the key (which is always a
@@ -65,16 +66,58 @@ ThreadLocalMap(ThreadLocal<?> firstKey, Object firstValue) {
             size = 1;
             setThreshold(INITIAL_CAPACITY);
         }
-
+}
 ```
 
 
+
+#### Entry
+
+Entry用于存储ThreadLocal的value也就是函数式实现，它继承自WeakReference弱引用
+
+```java
+static class Entry extends WeakReference<ThreadLocal<?>> {
+    /** The value associated with this ThreadLocal. */
+    Object value;
+
+    Entry(ThreadLocal<?> k, Object v) {
+        super(k);
+        value = v;
+    }
+}
+```
 
 
 
 ### ThreadLocal
 
+
+
 #### 初始化
+
+threadlocal提供的初始化方法，传入自定义的function函数实现【Supplier是一个函数式接口】，作用是创建一个threadLocal对象并定义了其函数接口的实现
+
+```java
+	// 初始化ThreadLocal
+    public static <S> ThreadLocal<S> withInitial(Supplier<? extends S> supplier) {
+        return new SuppliedThreadLocal<>(supplier);
+    }
+
+	// 继承自ThreadLocal
+    static final class SuppliedThreadLocal<T> extends ThreadLocal<T> {
+		// 函数接口的实现
+        private final Supplier<? extends T> supplier;
+
+        SuppliedThreadLocal(Supplier<? extends T> supplier) {
+            this.supplier = Objects.requireNonNull(supplier);
+        }
+
+        @Override
+        protected T initialValue() {
+            return supplier.get();
+        }
+    }
+```
 
 
 
@@ -102,7 +145,6 @@ ThreadLocal的散列算法
      * 2^32
      */
     private static final int HASH_INCREMENT = 0x61c88647;
-
     /**
      * Returns the next hash code.
      */
@@ -119,8 +161,6 @@ ThreadLocalMap(ThreadLocal<?> firstKey, Object firstValue) {
     setThreshold(INITIAL_CAPACITY);
 }
 ```
-
-### 
 
 
 
