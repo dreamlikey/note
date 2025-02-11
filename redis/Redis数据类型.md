@@ -24,9 +24,21 @@ hyperloglog
 
 
 
-## 底层数据类型
+## 底层数据结构
 
 简单动态字符串SDS
+
+inSet
+
+dict
+
+QuiklList
+
+ZipList
+
+SkipList
+
+RedisObject
 
 
 
@@ -64,7 +76,21 @@ List
 
 #### 跳表 skip list
 
+SkipList的特点:
+1、跳跃表是一个双向链表，每个节点都包含score和ele值
+
+2、节点按照score值排序，score值一样则按照ele字典排序
+
+3、每个节点都可以包含多层指针，层数是1到32之间的随机数
+
+4、不同层指针到下一个节点的跨度不同，层级越高，跨度越大
+
+5、增删改查效率与红黑树基本一致，实现却更简单
+
 #### 整数集合
 
 #### 压缩列表
 
+#### RedisObject
+
+![image-20241101150331932](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20241101150331932.png)
