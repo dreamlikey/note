@@ -45,7 +45,7 @@ java复制编辑public interface FactoryBean<T> {
 
 假设我们有一个 `Car` 类：
 
-```
+```java
 java复制编辑public class Car {
     private String brand;
 
@@ -61,7 +61,7 @@ java复制编辑public class Car {
 
 #### **创建 `CarFactoryBean` 来动态创建 `Car` 对象**
 
-```
+```java
 java复制编辑import org.springframework.beans.factory.FactoryBean;
 import org.springframework.stereotype.Component;
 
@@ -87,7 +87,7 @@ public class CarFactoryBean implements FactoryBean<Car> {
 
 #### **在 Spring 里使用 `FactoryBean`**
 
-```
+```java
 java复制编辑import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -124,7 +124,7 @@ Car brand: Tesla
 
 如果需要获取 `FactoryBean` 实例，而不是它生成的对象，Spring 提供了 **`&` 前缀**：
 
-```
+```java
 java复制编辑@Autowired
 private CarFactoryBean carFactoryBean;  // 获取 FactoryBean 生成的 Car 对象
 
@@ -166,7 +166,7 @@ CarFactoryBean factoryBean = (CarFactoryBean) context.getBean("&carFactoryBean")
 
 比如 `SqlSessionFactoryBean`（MyBatis），封装了 MyBatis 的 `SqlSessionFactory` 对象：
 
-```
+```java
 java复制编辑@Bean
 public SqlSessionFactoryBean sqlSessionFactory() {
     SqlSessionFactoryBean factoryBean = new SqlSessionFactoryBean();
@@ -179,7 +179,7 @@ public SqlSessionFactoryBean sqlSessionFactory() {
 
 Spring AOP 使用 `ProxyFactoryBean` 动态生成代理对象：
 
-```
+```java
 java复制编辑@Bean
 public ProxyFactoryBean proxyFactoryBean() {
     ProxyFactoryBean proxyFactoryBean = new ProxyFactoryBean();

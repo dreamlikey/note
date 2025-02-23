@@ -31,3 +31,4 @@ toObservable() 响应式执行hystrix命令以及被代理方法
 
 
 5、是否开启熔断，如果配置了circuitBreakerForceOpen表示熔断执行getFallback()逻辑；没有配置熔断走run()逻辑调用被代理方法逻辑
+
